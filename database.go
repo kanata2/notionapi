@@ -18,6 +18,7 @@ type DatabaseService interface {
 	Get(context.Context, DatabaseID) (*Database, error)
 	List(context.Context, *Pagination) (*DatabaseListResponse, error)
 	Query(context.Context, DatabaseID, *DatabaseQueryRequest) (*DatabaseQueryResponse, error)
+	Create(ctx context.Context, request *DatabaseCreateRequest) (*Database, error)
 }
 
 type DatabaseClient struct {
@@ -72,6 +73,22 @@ func (dc *DatabaseClient) Query(ctx context.Context, id DatabaseID, requestBody 
 	return &response, nil
 }
 
+// Create https://developers.notion.com/reference/create-a-database
+func (dc *DatabaseClient) Create(ctx context.Context, requestBody *DatabaseCreateRequest) (*Database, error) {
+	res, err := dc.apiClient.request(ctx, http.MethodPost, "databases", nil, requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var response Database
+	err = json.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
 type Database struct {
 	Object         ObjectType `json:"object"`
 	ID             ObjectID   `json:"id"`
@@ -105,7 +122,7 @@ func (qr *DatabaseQueryRequest) MarshalJSON() ([]byte, error) {
 	var filter interface{}
 	if qr.PropertyFilter != nil {
 		filter = qr.PropertyFilter
-	} else if qr.CompoundFilter != nil{
+	} else if qr.CompoundFilter != nil {
 		filter = qr.CompoundFilter
 	}
 	return json.Marshal(struct {
@@ -126,4 +143,10 @@ type DatabaseQueryResponse struct {
 	Results    []Page     `json:"results"`
 	HasMore    bool       `json:"has_more"`
 	NextCursor Cursor     `json:"next_cursor"`
+}
+
+type DatabaseCreateRequest struct {
+	Parent     Parent          `json:"parent"`
+	Title      []RichText      `json:"title"`
+	Properties PropertyConfigs `json:"properties"`
 }

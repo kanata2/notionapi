@@ -301,3 +301,57 @@ func TestDatabaseQueryRequest_MarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestDatabaseClient_Create(t *testing.T) {
+	tests := []struct {
+		name       string
+		filePath   string
+		statusCode int
+		req        *notionapi.DatabaseCreateRequest
+		want       *notionapi.Database
+		wantErr    bool
+	}{
+		{
+			name: "creates database",
+			req: &notionapi.DatabaseCreateRequest{
+				Parent: notionapi.Parent{
+					Type:   notionapi.ParentTypePageID,
+					PageID: "some_id",
+				},
+				Title: []notionapi.RichText{
+					{
+						Type: notionapi.ObjectTypeText,
+						Text: notionapi.Text{Content: "Grocery List"},
+					},
+				},
+				Properties: notionapi.PropertyConfigs{
+					"Name": notionapi.TitlePropertyConfig{},
+					"Food group": notionapi.SelectPropertyConfig{
+						Select: notionapi.Select{
+							Options: []notionapi.Option{
+								{
+									Name:  "Vegetable",
+									Color: notionapi.ColorGreen,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newMockedClient(t, tt.filePath, tt.statusCode)
+			client := notionapi.NewClient("some_token", notionapi.WithHTTPClient(c))
+			got, err := client.Database.Create(context.Background(), tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Create() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
